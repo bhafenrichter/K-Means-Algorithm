@@ -1,32 +1,69 @@
 package k.means.algorithm;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Random;
 
 public class KMeansAlgorithm {
 
     static ArrayList<Individual> data;
     static int clusterCount;
     static boolean isNormalized;
+    static ArrayList<Individual> means;
 
     public static void main(String[] args) {
         data = new ArrayList<Individual>();
+        means = new ArrayList<Individual>();
         String[] fileText = GetTextFromFile();
 
+        //gets the number of lcusters from user
         KeyboardInputClass input = new KeyboardInputClass();
         String str = input.getKeyboardInput("Specify the number of clusters:");
         clusterCount = Integer.parseInt(str);
 
+        //react based on input
         str = input.getKeyboardInput("Normalized (Default) or Non-Normalized Values? \n1. Normalized \n2. Non-Normalized\n");
         if (str.equals("1")) {
+            //normalize and create objects
             double[][] values = FormatAndNormalizeValues(fileText, true);
             createIndividuals(values);
+            
+            //generates first random means
+            means = generateRandomMeans(clusterCount);
+            
+            cluster(means);
         } else {
+            //Create individual objects
             double[][] values = FormatAndNormalizeValues(fileText, false);
             createIndividuals(values);
+            
+            //generates first random means
+            means = generateRandomMeans(clusterCount);
+            cluster(means);
         }
-        
-        
+    }
+
+    public static void cluster(ArrayList<Individual> means) {
+
+    }
+
+    public static ArrayList<Individual> generateRandomMeans(int size) {
+//        Random rand = new Random();
+//        Individual i = new Individual();
+//        i.height = rand.nextInt((100 - 1) + 1) + 1;
+//        i.weight = rand.nextInt((350 - 10) + 1) + 10;
+//        i.sex = rand.nextInt((1 - 0) + 1) + 0;
+//        i.college = rand.nextInt((4 - 1) + 1) + 1;
+//        i.athleticism = rand.nextInt((10 - 1) + 1) + 1;
+//        i.rad = rand.nextInt((10 - 1) + 1) + 1;
+//        i.age = rand.nextInt((100 - 1) + 1) + 1;
+//        i.income = rand.nextInt((1000000 - 10000) + 1) + 10000;
+//        return i;
+        ArrayList<Individual> means = new ArrayList<Individual>();
+        Random rand = new Random();
+        for (int i = 0; i < size; i++) {
+            means.add(data.get(rand.nextInt((data.size() - 1) + 1) + 1));
+        }
+        return means;
     }
 
     public static String[] GetTextFromFile() {
@@ -69,8 +106,12 @@ public class KMeansAlgorithm {
                 double val = vals[j][i];
 
                 //calculates max and min
-                if (val > max) max = val;
-                if (val < min) min = val;
+                if (val > max) {
+                    max = val;
+                }
+                if (val < min) {
+                    min = val;
+                }
             }
 
             //uses max and min to calculate new value
@@ -79,6 +120,19 @@ public class KMeansAlgorithm {
             }
         }
         return vals;
+    }
+
+    public static double distance(Individual a, Individual b) {
+        //closer to 0, the closer the distance is
+        double distance = Math.pow(b.age - a.age, 2)
+                + Math.pow(b.athleticism - a.athleticism, 2)
+                + Math.pow(b.college - a.college, 2)
+                + Math.pow(b.height - a.height, 2)
+                + Math.pow(b.income - a.income, 2)
+                + Math.pow(b.rad - a.rad, 2)
+                + Math.pow(b.sex - a.sex, 2)
+                + Math.pow(b.weight - a.weight, 2);
+        return Math.sqrt(distance);
     }
 
     public static void createIndividuals(double[][] vals) {
@@ -93,7 +147,7 @@ public class KMeansAlgorithm {
                     vals[i][6],
                     vals[i][7],
                     vals[i][8]);
-            data.add(cur);    
+            data.add(cur);
         }
     }
 }

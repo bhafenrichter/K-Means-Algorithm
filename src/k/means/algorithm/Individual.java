@@ -20,6 +20,10 @@ public class Individual {
     public double age;
     public double income;
     
+    public Individual(){
+        
+    }
+    
     public Individual(double id, double height, double weight, double sex, double college, double athleticism, double rad, double age, double income){
         this.id = id;
         this.height = height;
@@ -30,5 +34,15 @@ public class Individual {
         this.rad = rad;
         this.age = age;
         this.income = income;
+    }
+    public String toString(){
+        return "height: " + height + 
+                ", weight: " + weight + 
+                ", sex: " + sex + 
+                ", college: " + college + 
+                ", athleticism: " + athleticism + 
+                ", RAD: " + rad + 
+                ", age: " + age + 
+                ", income: " + income; 
     }
 }
