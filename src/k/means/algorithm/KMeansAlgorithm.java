@@ -1,5 +1,6 @@
 package k.means.algorithm;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
@@ -8,56 +9,70 @@ public class KMeansAlgorithm {
 
     static ArrayList<Individual> data;
     static int clusterCount;
-    static boolean isNormalized;
     static ArrayList<Individual> means;
     static double[][] dataValues;
-
+    static int[] previousClusterSizes;
+    static int errorCount;
+    
     public static void main(String[] args) {
+        getUserAction();
+    }
+
+    public static void getUserAction() {
+        //initialize static variables
         data = new ArrayList<Individual>();
         means = new ArrayList<Individual>();
         String[] fileText = GetTextFromFile();
-
-        //gets the number of lcusters from user
+        clusterCount = 0;
+        
+        //gets the number of custers from user
         KeyboardInputClass input = new KeyboardInputClass();
         String str = input.getKeyboardInput("Specify the number of clusters:");
         clusterCount = Integer.parseInt(str);
+
+        previousClusterSizes = new int[clusterCount];
 
         //react based on input
         str = input.getKeyboardInput("Normalized (Default) or Non-Normalized Values? \n1. Normalized \n2. Non-Normalized\n");
         if (str.equals("1")) {
             //normalize and create objects
+            means = generateRandomMeans(clusterCount);
             dataValues = FormatAndNormalizeValues(fileText, true);
             createIndividuals(dataValues);
-         
-            means = generateRandomMeans(clusterCount);
             cluster(means);
         } else {
             //Create individual objects
+            means = generateRandomMeans(clusterCount);
             dataValues = FormatAndNormalizeValues(fileText, false);
             createIndividuals(dataValues);
-            means = generateRandomMeans(clusterCount);
-            
+
             cluster(means);
+        }
+        str = input.getKeyboardInput("Run again? (Y / N)");
+        if (str.toLowerCase().equals("y")) {
+            getUserAction();
+        } else {
+            System.exit(-1);
         }
     }
 
     public static void cluster(ArrayList<Individual> means) {
         //evaluate all of the distances between the various means
         double[][] distances = new double[means.size()][data.size()];
-        for(int i = 0; i < means.size(); i++){
+        for (int i = 0; i < means.size(); i++) {
             Individual mean = means.get(i);
-            for(int j = 0; j < data.size(); j++){
+            for (int j = 0; j < data.size(); j++) {
                 distances[i][j] = distance(mean, data.get(j));
             }
         }
-      
+
         //designate the points to their various cluster based on the distance
         ArrayList<ArrayList<Individual>> clusters = new ArrayList<ArrayList<Individual>>();
         //initialize clusters
-        for(int i = 0; i < clusterCount; i++){
+        for (int i = 0; i < clusterCount; i++) {
             clusters.add(new ArrayList<Individual>());
         }
-        
+
         for (int i = 0; i < data.size(); i++) {
             Individual curIndividual = data.get(i);
             double bestDistance = 1000;
@@ -65,25 +80,21 @@ public class KMeansAlgorithm {
             for (int j = 0; j < means.size(); j++) {
                 //find the best distance
                 double distance = distance(curIndividual, means.get(j));
-                if(distance < bestDistance){
+                if (distance < bestDistance) {
                     bestDistance = distance;
                     meanIndex = j;
                 }
             }
             clusters.get(meanIndex).add(curIndividual);
         }
-        
-//        for (int i = 0; i < clusters.size(); i++) {
-//            System.out.println(clusters.get(i).toString());
-//        }
-        
+
         ArrayList<Individual> newMeans = new ArrayList<Individual>();
         //recalculate the mean. Average all of the individuals attributes in cluster
-        for(int i = 0; i < clusters.size(); i++){
+        for (int i = 0; i < clusters.size(); i++) {
             //base attributes
-            double h,w,s,c,a,r,ag,in;
+            double h, w, s, c, a, r, ag, in;
             h = w = s = c = a = r = ag = in = 0;
-            for (int j = 0; j < 9; j++) {
+            for (int j = 0; j < clusters.get(i).size(); j++) {
                 h += clusters.get(i).get(j).height;
                 w += clusters.get(i).get(j).weight;
                 s += clusters.get(i).get(j).sex;
@@ -94,46 +105,60 @@ public class KMeansAlgorithm {
                 in += clusters.get(i).get(j).income;
             }
             Individual mean = new Individual();
-            mean.height = h / clusters.size();
-            mean.weight = w / clusters.size();
-            mean.sex = s / clusters.size();
-            mean.college = c / clusters.size();
-            mean.athleticism = a / clusters.size();
-            mean.rad = r / clusters.size();
-            mean.age = ag / clusters.size();
-            mean.income = in / clusters.size();
-            
+            mean.height = h / clusters.get(i).size();
+            mean.weight = w / clusters.get(i).size();
+            mean.sex = s / clusters.get(i).size();
+            mean.college = c / clusters.get(i).size();
+            mean.athleticism = a / clusters.get(i).size();
+            mean.rad = r / clusters.get(i).size();
+            mean.age = ag / clusters.get(i).size();
+            mean.income = in / clusters.get(i).size();
+
             newMeans.add(mean);
+        }
+
+        //evaluate whether any elements in the clusters moved
+        int[] currentClusterSizes = new int[clusterCount];
+        for (int i = 0; i < clusterCount; i++) {
+            currentClusterSizes[i] = clusters.get(i).size();
+        }
+
+        if (Arrays.equals(currentClusterSizes, previousClusterSizes)) {
+            boolean invalid = false;
+            //check if any of the clusters came out to 0, if so restart
+            for (int i = 0; i < currentClusterSizes.length; i++) {
+                int cur = currentClusterSizes[i];
+                if (cur == 0) {
+                    invalid = true;
+                }
+            }
+
+            if (invalid) {
+                errorCount++;
+                System.out.println("There is a cluster with 0 elements, I'm going to regenerate the means.");
+                
+                if(errorCount == 10){
+                    System.out.println("There is an error with your dataset.  Try using less clusters.");
+                    getUserAction();
+                }
+                
+                means = generateRandomMeans(clusterCount);
+                cluster(means);
+            } else {
+                printClusters(clusters);
+            }
+
+        } else {
+            previousClusterSizes = currentClusterSizes;
+            cluster(newMeans);
         }
     }
 
     public static ArrayList<Individual> generateRandomMeans(int size) {
         Random rand = new Random();
         ArrayList<Individual> randomized = new ArrayList<Individual>();
-        
-        //TODO: Randomize properly
-//        ArrayList<Individual> randomized = new ArrayList<Individual>();
-//        for (int j = 0; j < size; j++) {
-//            Individual i = new Individual();
-//            i.height = rand.nextInt((100 - 1) + 1) + 1;
-//            i.weight = rand.nextInt((350 - 10) + 1) + 10;
-//            i.sex = rand.nextInt((1 - 0) + 1) + 0;
-//            i.college = rand.nextInt((4 - 1) + 1) + 1;
-//            i.athleticism = rand.nextInt((10 - 1) + 1) + 1;
-//            i.rad = rand.nextInt((10 - 1) + 1) + 1;
-//            i.age = rand.nextInt((100 - 1) + 1) + 1;
-//            i.income = rand.nextInt((1000000 - 10000) + 1) + 10000;
-//            
-//            randomized.add(i);
-//        }
-//        return randomized;
-        while(randomized.size() < size){
-            //takes a random point and makes it the cluster
-            int index = rand.nextInt((data.size() - 1) + 1) + 1;
-            if(data.get(index).age != 0){
-               randomized.add(data.get(index));
-            }
-            
+        for (int j = 0; j < size; j++) {
+            randomized.add(new Individual());
         }
         return randomized;
     }
@@ -164,21 +189,12 @@ public class KMeansAlgorithm {
                 vals[i][j] = cell;
             }
         }
-        
+
         //splices all of the empty entries
         vals = Arrays.copyOf(vals, breakpoint);
-        
-        //don't normalize values, just return the values we currently have
-        if (!isNormalized) {
-            return vals;
-        }else{
-            return normalize(vals, breakpoint);
-        }
-    }
-    
-    public static double[][] normalize(double[][] vals, int breakpoint){
-        //find maxes and mins and calculate normalized value
-        for (int i = 0; i < 9; i++) {
+
+        //find maxes and mins and calculate normalized value if neccessary
+        for (int i = 1; i < 9; i++) {
 
             double max = 0;
             double min = 1000000;
@@ -194,10 +210,16 @@ public class KMeansAlgorithm {
                 }
             }
 
-            //uses max and min to calculate new value
-            for (int j = 0; j < breakpoint; j++) {
-                vals[j][i] = (vals[j][i] - min) / (max - min);
+            //normalizes values
+            if (isNormalized) {
+                //uses max and min to calculate new value
+                for (int j = 0; j < breakpoint; j++) {
+                    vals[j][i] = (vals[j][i] - min) / (max - min);
+                }
             }
+
+            updateMeans(vals, i, max, min, isNormalized);
+
         }
         return vals;
     }
@@ -229,5 +251,116 @@ public class KMeansAlgorithm {
                     vals[i][8]);
             data.add(cur);
         }
+    }
+
+    private static void updateMeans(double[][] vals, int i, double max, double min, boolean isNormalized) {
+        switch (i) {
+            case 1:
+                for (int j = 0; j < means.size(); j++) {
+                    Random rand = new Random();
+                    means.get(j).height = min + (max - min) * rand.nextDouble();
+                    if (isNormalized) {
+                        means.get(j).height = (means.get(j).height - min) / (max - min);
+                    } else {
+                        
+                    }
+
+                }
+                break;
+            case 2:
+                for (int j = 0; j < means.size(); j++) {
+                    Random rand = new Random();
+                    means.get(j).weight = min + (max - min) * rand.nextDouble();
+                    if (isNormalized) {
+                        means.get(j).weight = (means.get(j).weight - min) / (max - min);
+                    }else{
+                        
+                    }
+                }
+                break;
+            case 3:
+                for (int j = 0; j < means.size(); j++) {
+                    Random rand = new Random();
+                    means.get(j).sex = min + (max - min) * rand.nextDouble();
+                    if (isNormalized) {
+                        means.get(j).sex = (means.get(j).sex - min) / (max - min);
+                    }else{
+                        
+                    }
+                }
+                break;
+            case 4:
+                for (int j = 0; j < means.size(); j++) {
+                    Random rand = new Random();
+                    means.get(j).college = min + (max - min) * rand.nextDouble();
+                    if (isNormalized) {
+                        means.get(j).college = (means.get(j).college - min) / (max - min);
+                    }else{
+                        
+                    }
+                }
+                break;
+            case 5:
+                for (int j = 0; j < means.size(); j++) {
+                    Random rand = new Random();
+                    means.get(j).athleticism = min + (max - min) * rand.nextDouble();
+                    if (isNormalized) {
+                        means.get(j).athleticism = (means.get(j).athleticism - min) / (max - min);
+                    }else{
+                        
+                    }
+                }
+                break;
+            case 6:
+                for (int j = 0; j < means.size(); j++) {
+                    Random rand = new Random();
+                    means.get(j).rad = min + (max - min) * rand.nextDouble();
+                    if (isNormalized) {
+                        means.get(j).rad = (means.get(j).rad - min) / (max - min);
+                    }else{
+                        
+                    }
+                }
+                break;
+            case 7:
+                for (int j = 0; j < means.size(); j++) {
+                    Random rand = new Random();
+                    means.get(j).age = min + (max - min) * rand.nextDouble();
+                    if (isNormalized) {
+                        means.get(j).age = (means.get(j).age - min) / (max - min);
+                    }else{
+                        
+                    }
+                }
+                break;
+            case 8:
+                for (int j = 0; j < means.size(); j++) {
+                    Random rand = new Random();
+                    means.get(j).income = min + (max - min) * rand.nextDouble();
+                    if (isNormalized) {
+                        means.get(j).income = (means.get(j).income - min) / (max - min);
+                    }else{
+                        
+                    }
+                }
+                break;
+        }
+    }
+
+    public static void printClusters(ArrayList<ArrayList<Individual>> clusters) {
+        DecimalFormat df = new DecimalFormat("#.###");
+        for (int i = 0; i < clusters.size(); i++) {
+            ArrayList<Individual> cluster = clusters.get(i);
+            System.out.println("Cluster " + (i + 1));
+            System.out.println("ID\tHeight\tWeight\tSex\tCollege\tAth.\tRAD\tAge\tIncome");
+            for (int j = 0; j < cluster.size(); j++) {
+                Individual cur = cluster.get(j);
+                System.out.println((int) cur.id + "\t" + df.format(cur.height) + "\t" + df.format(cur.weight) + "\t" + df.format(cur.sex) + "\t" + df.format(cur.college) + "\t" + df.format(cur.athleticism) + "\t" + df.format(cur.rad) + "\t" + df.format(cur.age) + "\t" + df.format(cur.income));
+            }
+            System.out.println("");
+        }
+//        for (int i = 0; i < clusters.size(); i++) {
+//            System.out.println("Size: " + clusters.get(i).size());
+//        }
     }
 }
