@@ -1,3 +1,13 @@
+//Program: Hafenrichter.java
+//Course: COSC 420
+//Description: An implementation of the k-means algorithm
+//Author: Brandon Hafenrichter
+//Revised: October 29, 2015
+//Language: Java
+//IDE: Netbeans 8.0.2
+//***********************************************************************************************************
+//***********************************************************************************************************
+
 package k.means.algorithm;
 
 import java.text.DecimalFormat;
@@ -5,24 +15,45 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
+//Class Main.java
+//Description: Contains the essential methods and calls required to run the k-means algorithm
+//***********************************************************************************************************
+//***********************************************************************************************************
+
 public class KMeansAlgorithm {
 
-    static ArrayList<Individual> data;
-    static int clusterCount;
-    static ArrayList<Individual> means;
-    static double[][] dataValues;
-    static int[] previousClusterSizes;
-    static int errorCount;
-    
+    static ArrayList<Individual> data;  //contains all of the data cast into an arraylist of individuals
+    static int clusterCount;            //the number of clusters specified by the user
+    static ArrayList<Individual> means; //the collection of means (number specified by user) cast into Individual
+    static double[][] dataValues;       //all of the data values read from the string in an double[][]
+    static int[] previousClusterSizes;  //an array that keeps track of the cluster sizes that will be used to determine when to stop clustering
+    static int errorCount;              //keeps track of how many times we've gotten a cluster with 0 elements in it
+    static boolean isNormalized;        //tells program whether user would like the data normalized or not
+    static String[] fileText;           //the file text specified by the user
+
+//***********************************************************************************************************
+//Method: Main
+//Description: Contains the essential methods and calls required to run the algorithms
+//Returns: None
+//Calls: getUserAction()               
+//Parameters: String[] args             standard parameters for the main method
+//***********************************************************************************************************
     public static void main(String[] args) {
         getUserAction();
     }
 
+//***********************************************************************************************************
+//Method: getUserAction()
+//Description: Initializes static variables and prompts user for necessary information
+//Returns: None
+//Calls: initializeClustering()         
+//Parameters: None
+//***********************************************************************************************************
     public static void getUserAction() {
         //initialize static variables
         data = new ArrayList<Individual>();
         means = new ArrayList<Individual>();
-        String[] fileText = GetTextFromFile();
+        fileText = GetTextFromFile();
         clusterCount = 0;
         
         //gets the number of custers from user
@@ -36,17 +67,11 @@ public class KMeansAlgorithm {
         str = input.getKeyboardInput("Normalized (Default) or Non-Normalized Values? \n1. Normalized \n2. Non-Normalized\n");
         if (str.equals("1")) {
             //normalize and create objects
-            means = generateRandomMeans(clusterCount);
-            dataValues = FormatAndNormalizeValues(fileText, true);
-            createIndividuals(dataValues);
-            cluster(means);
+            isNormalized = true;
+            initializeClustering(isNormalized);
         } else {
-            //Create individual objects
-            means = generateRandomMeans(clusterCount);
-            dataValues = FormatAndNormalizeValues(fileText, false);
-            createIndividuals(dataValues);
-
-            cluster(means);
+            isNormalized = false;
+            initializeClustering(isNormalized);
         }
         str = input.getKeyboardInput("Run again? (Y / N)");
         if (str.toLowerCase().equals("y")) {
@@ -56,6 +81,35 @@ public class KMeansAlgorithm {
         }
     }
 
+//***********************************************************************************************************
+//Method: initializeClustering
+//Description: Generates the Means, normalizes values, and calls the clustering algorithms
+//Returns:  None
+//Calls:    generateRandomMeans()
+//          FormatandNormalizeValues()
+//          createIndividuals()
+//          cluster()                   
+//Parameters: None
+//***********************************************************************************************************
+    
+    public static void initializeClustering(boolean isNormalized){
+
+        means = generateRandomMeans(clusterCount);
+        dataValues = FormatAndNormalizeValues(fileText, isNormalized);
+        createIndividuals(dataValues);
+        cluster(means);
+    }
+
+//***********************************************************************************************************
+//Method: cluster
+//Description: Clusters all of the data based on the means given
+//Returns:  None
+//Calls:    distance()
+//          printClusters()
+//          cluster()                   
+//Parameters: ArrayList<Individual> gives the algorithm the neccessary means to use for clustering
+//***********************************************************************************************************
+    
     public static void cluster(ArrayList<Individual> means) {
         //evaluate all of the distances between the various means
         double[][] distances = new double[means.size()][data.size()];
@@ -135,16 +189,15 @@ public class KMeansAlgorithm {
 
             if (invalid) {
                 errorCount++;
-                System.out.println("There is a cluster with 0 elements, I'm going to regenerate the means.");
                 
-                if(errorCount == 10){
-                    System.out.println("There is an error with your dataset.  Try using less clusters.");
+                if(errorCount == 50){
+                    System.out.println("There was a cluster with 0 elements. Try using less clusters.");
                     getUserAction();
                 }
                 
-                means = generateRandomMeans(clusterCount);
-                cluster(means);
+                initializeClustering(isNormalized);
             } else {
+                errorCount = 0;
                 printClusters(clusters);
             }
 
@@ -154,6 +207,14 @@ public class KMeansAlgorithm {
         }
     }
 
+//***********************************************************************************************************
+//Method: generateRandomMeans
+//Description: Intializes the first random means based on the number of clusters specified
+//Returns:  ArrayList<Individual>   all of the means in a collection
+//Calls:    None                
+//Parameters: int size              the number of clusters needed to be generated
+//***********************************************************************************************************
+    
     public static ArrayList<Individual> generateRandomMeans(int size) {
         Random rand = new Random();
         ArrayList<Individual> randomized = new ArrayList<Individual>();
@@ -163,6 +224,15 @@ public class KMeansAlgorithm {
         return randomized;
     }
 
+//***********************************************************************************************************
+//Method: GetTextFromFile
+//Description: Gets the text from the file specified by the user and casts it to string[]
+//Returns:  String[]                all of the elements in the text file
+//Calls:    getFileName()
+//          getFileContents()           
+//Parameters: None
+//***********************************************************************************************************
+    
     public static String[] GetTextFromFile() {
         TextFileClass textFile = new TextFileClass();
         textFile.getFileName("Specify the text file to be read:");
@@ -171,6 +241,15 @@ public class KMeansAlgorithm {
         return textFile.text;
     }
 
+//***********************************************************************************************************
+//Method: FormatAndNormalizeValues
+//Description: Takes the fileText and converts it into a double[][] that represents all of the data.  It also
+//             normalizes the data if neccessary
+//Returns:  double[][]              all of the data in a double[][]
+//Calls:    updateMeans()              
+//Parameters: String[] fileText     text from the file to be converted
+//            boolean isNormalized  flag to see whether data needs to be normalized or not
+//***********************************************************************************************************
     private static double[][] FormatAndNormalizeValues(String[] fileText, boolean isNormalized) {
         //global variable to be used later
         double[][] vals = new double[fileText.length][9];
@@ -218,12 +297,20 @@ public class KMeansAlgorithm {
                 }
             }
 
-            updateMeans(vals, i, max, min, isNormalized);
+            updateMeans(i, max, min, isNormalized);
 
         }
         return vals;
     }
 
+//***********************************************************************************************************
+//Method: distance
+//Description: Finds the distance between two individuals
+//Returns:  double                  distance between the two individuals
+//Calls:    None                  
+//Parameters: Individual a          first individual to be compared
+//            Individual b          second individual to be compared
+//***********************************************************************************************************
     public static double distance(Individual a, Individual b) {
         //closer to 0, the closer the distance is
         double distance = Math.pow(b.age - a.age, 2)
@@ -237,6 +324,13 @@ public class KMeansAlgorithm {
         return Math.sqrt(distance);
     }
 
+//***********************************************************************************************************
+//Method: createIndividuals
+//Description: Casts double[][] data into a clean object
+//Returns:  None
+//Calls:    None                 
+//Parameters: double[][] vals           all of the data to be converted to individuals with their attributes
+//***********************************************************************************************************
     public static void createIndividuals(double[][] vals) {
         for (int i = 0; i < vals.length; i++) {
             Individual cur = new Individual(
@@ -253,7 +347,17 @@ public class KMeansAlgorithm {
         }
     }
 
-    private static void updateMeans(double[][] vals, int i, double max, double min, boolean isNormalized) {
+//***********************************************************************************************************
+//Method: updateMeans
+//Description: randomizes and normalizes the means if neccessary. It uses the max and min to randomize intelligently
+//Returns:  None
+//Calls:    None                  
+//Parameters: int i             index of the attribute we are modifying
+//            double max        max value used for randomizing and normalizing
+//            double min        min value used for randomizing and normalizing
+//            boolean isNormalized  flag that tells us if we need to normalize value
+//***********************************************************************************************************
+    private static void updateMeans(int i, double max, double min, boolean isNormalized) {
         switch (i) {
             case 1:
                 for (int j = 0; j < means.size(); j++) {
@@ -346,7 +450,13 @@ public class KMeansAlgorithm {
                 break;
         }
     }
-
+//***********************************************************************************************************
+//Method: printClusters
+//Description: Prints the clusters once a valid solution has been created
+//Returns:  None
+//Calls:    None                
+//Parameters: ArrayList<ArrayList<Individual>> the clusters that need to be printed 
+//***********************************************************************************************************
     public static void printClusters(ArrayList<ArrayList<Individual>> clusters) {
         DecimalFormat df = new DecimalFormat("#.###");
         for (int i = 0; i < clusters.size(); i++) {
@@ -355,12 +465,9 @@ public class KMeansAlgorithm {
             System.out.println("ID\tHeight\tWeight\tSex\tCollege\tAth.\tRAD\tAge\tIncome");
             for (int j = 0; j < cluster.size(); j++) {
                 Individual cur = cluster.get(j);
-                System.out.println((int) cur.id + "\t" + df.format(cur.height) + "\t" + df.format(cur.weight) + "\t" + df.format(cur.sex) + "\t" + df.format(cur.college) + "\t" + df.format(cur.athleticism) + "\t" + df.format(cur.rad) + "\t" + df.format(cur.age) + "\t" + df.format(cur.income));
+                System.out.println((int) cur.id + "\t" + df.format(cur.height) + "\t" + df.format(cur.weight) + "\t" + (int)cur.sex + "\t" + df.format(cur.college) + "\t" + df.format(cur.athleticism) + "\t" + df.format(cur.rad) + "\t" + df.format(cur.age) + "\t" + df.format(cur.income));
             }
             System.out.println("");
         }
-//        for (int i = 0; i < clusters.size(); i++) {
-//            System.out.println("Size: " + clusters.get(i).size());
-//        }
     }
 }
