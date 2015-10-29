@@ -234,11 +234,31 @@ public class KMeansAlgorithm {
 //***********************************************************************************************************
     
     public static String[] GetTextFromFile() {
-        TextFileClass textFile = new TextFileClass();
-        textFile.getFileName("Specify the text file to be read:");
-        textFile.getFileContents();
+        while (true) {
+            TextFileClass textFile = new TextFileClass();
 
-        return textFile.text;
+            textFile.getFileName("Specify the text file to be read:");
+
+            textFile.getFileContents();
+            //filter out all of bad entries
+            ArrayList<String> str = new ArrayList<String>(Arrays.asList(textFile.text));
+            for (int i = 0; i < str.size(); i++) {
+                if (str.get(i) != null && str.get(i).length() < 25) {
+                    str.remove(i);
+                }
+            }
+
+            //cast arraylist back to array
+            String[] array = new String[str.size()];
+            for (int i = 0; i < array.length; i++) {
+                array[i] = str.get(i);
+
+            }
+            if (array[0] != null) {
+                return array;
+            }
+        }
+
     }
 
 //***********************************************************************************************************
@@ -264,8 +284,8 @@ public class KMeansAlgorithm {
 
             String[] row = fileText[i].split(", ");
             for (int j = 0; j < row.length; j++) {
-                int cell = Integer.parseInt(row[j]);
-                vals[i][j] = cell;
+                   int cell = Integer.parseInt(row[j]);
+                   vals[i][j] = cell; 
             }
         }
 
